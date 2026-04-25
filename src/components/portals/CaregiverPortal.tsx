@@ -10,6 +10,8 @@ import { MOCK_PATIENT, MOCK_MEMORIES } from '../../constants';
 import { UserRole } from '../../types';
 import { cn } from '../../lib/utils';
 import NarrationStudio from '../NarrationStudio';
+import VoiceRecorder, { type VoiceRecorderProcessed } from '../VoiceRecorder';
+import Modal from '../Modal';
 
 interface CaregiverPortalProps {
   role: UserRole;
@@ -19,6 +21,27 @@ type CaregiverTab = 'dashboard' | 'vault' | 'program' | 'family' | 'narration';
 
 export default function CaregiverPortal({ role }: CaregiverPortalProps) {
   const [activeTab, setActiveTab] = useState<CaregiverTab>('dashboard');
+  const [isRecorderOpen, setIsRecorderOpen] = useState(false);
+
+  const handleRecordingProcessed = (data: VoiceRecorderProcessed) => {
+    // The voice has been cloned and the speech has been transcribed by
+    // ElevenLabs. The teammate's database layer should persist `data` here
+    // (audio Blob + transcript text + voice id + timestamps + IDs).
+    //
+    // TODO(db): wire this up when the schema is ready, e.g.
+    //   await supabase.from('voice_recordings').insert({
+    //     patient_id: data.patientId,
+    //     contributor_id: data.contributorId,
+    //     voice_id: data.voice?.voiceId ?? null,
+    //     voice_name: data.voiceName,
+    //     transcript: data.transcript?.text ?? null,
+    //     duration_ms: data.durationMs,
+    //     recorded_at: data.recordedAt,
+    //     audio_url: <upload data.audioBlob to storage and store the URL>,
+    //   });
+    // eslint-disable-next-line no-console
+    console.info('[CaregiverPortal] recording processed (pending DB save):', data);
+  };
 
   return (
     <div className="min-h-screen bg-posthog-parchment dark:bg-[#111827] flex">
@@ -133,7 +156,11 @@ export default function CaregiverPortal({ role }: CaregiverPortalProps) {
                             <Camera size={18} />
                             Upload Photos
                           </button>
-                          <button className="flex items-center gap-2 px-6 py-3 bg-posthog-sage dark:bg-slate-900 border border-indigo-200 text-posthog-orange rounded-2xl text-sm font-bold hover:bg-posthog-light-sage/50 dark:bg-slate-800/50 transition-all">
+                          <button
+                            type="button"
+                            onClick={() => setIsRecorderOpen(true)}
+                            className="flex items-center gap-2 px-6 py-3 bg-posthog-sage dark:bg-slate-900 border border-indigo-200 text-posthog-orange rounded-2xl text-sm font-bold hover:bg-posthog-light-sage/50 dark:bg-slate-800/50 transition-all"
+                          >
                             <Mic size={18} />
                             Record Audio
                           </button>
@@ -278,6 +305,22 @@ export default function CaregiverPortal({ role }: CaregiverPortalProps) {
           )}
         </div>
       </div>
+
+      <Modal
+        isOpen={isRecorderOpen}
+        onClose={() => setIsRecorderOpen(false)}
+        title="Record Audio"
+        description={`Capture a memory in ${MOCK_PATIENT.preferredName}'s family member's voice. We'll clone the voice and transcribe what was said.`}
+      >
+        <VoiceRecorder
+          defaultVoiceName="Sarah Johnson"
+          defaultVoiceDescription="Family member · MemoryBridge contribution"
+          patientId={MOCK_PATIENT.id}
+          contributorId="u2"
+          languageCode="en"
+          onProcessed={handleRecordingProcessed}
+        />
+      </Modal>
     </div>
   );
 }

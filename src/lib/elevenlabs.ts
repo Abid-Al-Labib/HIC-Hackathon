@@ -92,3 +92,172 @@ export async function generateNarrationAudio(
 
   return { blob, url, voiceId, modelId, contentType };
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Recording → voice clone + transcription
+ *
+ * The recorder UI captures a Blob via MediaRecorder and POSTs the raw audio
+ * (no multipart wrapper) to one of the routes below. The API key never leaves
+ * the server.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+export const ELEVENLABS_RECORD_PROCESS_ENDPOINT = "/api/elevenlabs/record-process";
+export const ELEVENLABS_CLONE_VOICE_ENDPOINT = "/api/elevenlabs/clone-voice";
+export const ELEVENLABS_TRANSCRIBE_ENDPOINT = "/api/elevenlabs/transcribe";
+
+export interface RecordingVoice {
+  voiceId: string;
+  name: string;
+  requiresVerification?: boolean;
+}
+
+export interface RecordingTranscript {
+  text: string;
+  languageCode?: string;
+  languageProbability?: number;
+  audioDurationSecs?: number;
+}
+
+export interface RecordingErrorInfo {
+  message: string;
+  status: number;
+  details?: unknown;
+}
+
+export interface ProcessRecordingInput {
+  audioBlob: Blob;
+  voiceName: string;
+  voiceDescription?: string;
+  languageCode?: string;
+  signal?: AbortSignal;
+}
+
+export interface ProcessRecordingResult {
+  voice: RecordingVoice | null;
+  transcript: RecordingTranscript | null;
+  errors: {
+    voice: RecordingErrorInfo | null;
+    transcript: RecordingErrorInfo | null;
+  };
+  bytes: number;
+  contentType: string;
+}
+
+function buildAudioRequestUrl(
+  endpoint: string,
+  params: Record<string, string | undefined>
+): string {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== "") search.set(key, value);
+  }
+  const query = search.toString();
+  return query ? `${endpoint}?${query}` : endpoint;
+}
+
+async function postAudio<T>(
+  endpoint: string,
+  params: Record<string, string | undefined>,
+  audioBlob: Blob,
+  signal?: AbortSignal
+): Promise<T> {
+  if (!audioBlob || audioBlob.size === 0) {
+    throw new ElevenLabsTtsError("audioBlob is required and must be non-empty", 400);
+  }
+
+  const url = buildAudioRequestUrl(endpoint, params);
+  const contentType = audioBlob.type || "audio/webm";
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": contentType },
+    body: audioBlob,
+    signal,
+  });
+
+  if (!response.ok) {
+    let message = `Request failed (${response.status})`;
+    let details: unknown;
+    try {
+      const data = (await response.json()) as { error?: unknown; details?: unknown };
+      if (typeof data?.error === "string") message = data.error;
+      details = data?.details;
+    } catch {
+      // body wasn't JSON; ignore
+    }
+    throw new ElevenLabsTtsError(message, response.status, details);
+  }
+
+  return (await response.json()) as T;
+}
+
+/**
+ * Sends one recording to the backend, which clones the speaker's voice AND
+ * transcribes the speech in parallel. Resolves with both results (or
+ * per-call errors if either side failed).
+ */
+export async function processRecording(
+  input: ProcessRecordingInput
+): Promise<ProcessRecordingResult> {
+  const voiceName = input.voiceName?.trim();
+  if (!voiceName) {
+    throw new ElevenLabsTtsError("voiceName is required", 400);
+  }
+
+  return await postAudio<ProcessRecordingResult>(
+    ELEVENLABS_RECORD_PROCESS_ENDPOINT,
+    {
+      voiceName,
+      description: input.voiceDescription?.trim() || undefined,
+      languageCode: input.languageCode?.trim() || undefined,
+    },
+    input.audioBlob,
+    input.signal
+  );
+}
+
+export interface CloneVoiceFromRecordingInput {
+  audioBlob: Blob;
+  voiceName: string;
+  voiceDescription?: string;
+  signal?: AbortSignal;
+}
+
+export async function cloneVoiceFromRecording(
+  input: CloneVoiceFromRecordingInput
+): Promise<RecordingVoice & { raw?: unknown }> {
+  const voiceName = input.voiceName?.trim();
+  if (!voiceName) {
+    throw new ElevenLabsTtsError("voiceName is required", 400);
+  }
+  return await postAudio<RecordingVoice & { raw?: unknown }>(
+    ELEVENLABS_CLONE_VOICE_ENDPOINT,
+    {
+      voiceName,
+      description: input.voiceDescription?.trim() || undefined,
+    },
+    input.audioBlob,
+    input.signal
+  );
+}
+
+export interface TranscribeRecordingInput {
+  audioBlob: Blob;
+  languageCode?: string;
+  modelId?: string;
+  signal?: AbortSignal;
+}
+
+export async function transcribeRecording(
+  input: TranscribeRecordingInput
+): Promise<RecordingTranscript & { raw?: unknown }> {
+  return await postAudio<RecordingTranscript & { raw?: unknown }>(
+    ELEVENLABS_TRANSCRIBE_ENDPOINT,
+    {
+      languageCode: input.languageCode?.trim() || undefined,
+      modelId: input.modelId?.trim() || undefined,
+    },
+    input.audioBlob,
+    input.signal
+  );
+}
