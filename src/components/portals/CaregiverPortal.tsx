@@ -7,7 +7,7 @@ import {
   TrendingUp, MessageCircle, LayoutDashboard
 } from 'lucide-react';
 import { MOCK_PATIENT, MOCK_MEMORIES } from '../../constants';
-import { UserRole } from '../../types';
+import type { UserRole } from '../../types';
 import { cn } from '../../lib/utils';
 
 interface CaregiverPortalProps {

@@ -1,23 +1,26 @@
 import { useEffect, useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
-import DashboardPage from "./pages/DashboardPage";
 import LandingPage from "./pages/LandingPage";
+import AuthPage from "./pages/AuthPage";
 import MemoryBridgePage from "./pages/MemoryBridgePage";
+import { useAuth } from "./context/AuthContext";
 
 type Theme = "light" | "dark";
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { session, loading } = useAuth();
+  if (loading) return null;
+  if (!session) return <Navigate to="/auth" replace />;
+  return <>{children}</>;
+}
 
 function App() {
   const [theme, setTheme] = useState<Theme>("light");
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme");
-    if (savedTheme === "light" || savedTheme === "dark") {
-      setTheme(savedTheme);
-      return;
-    }
-
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    setTheme(prefersDark ? "dark" : "light");
+    if (savedTheme === "light" || savedTheme === "dark") { setTheme(savedTheme); return; }
+    setTheme(window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
   }, []);
 
   useEffect(() => {
@@ -25,18 +28,20 @@ function App() {
     localStorage.setItem("theme", theme);
   }, [theme]);
 
-  const toggleTheme = () => {
-    setTheme((prevTheme) => (prevTheme === "light" ? "dark" : "light"));
-  };
+  const toggleTheme = () => setTheme((t) => (t === "light" ? "dark" : "light"));
 
   return (
     <Routes>
       <Route path="/" element={<LandingPage theme={theme} onToggleTheme={toggleTheme} />} />
+      <Route path="/auth" element={<AuthPage />} />
       <Route
         path="/app"
-        element={<DashboardPage theme={theme} onToggleTheme={toggleTheme} />}
+        element={
+          <ProtectedRoute>
+            <MemoryBridgePage />
+          </ProtectedRoute>
+        }
       />
-      <Route path="/memorybridge" element={<MemoryBridgePage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

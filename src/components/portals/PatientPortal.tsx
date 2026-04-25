@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Music, Image as ImageIcon, MessageSquare, Heart, Play, Pause } from 'lucide-react';
 import { MOCK_PATIENT, MOCK_MEMORIES } from '../../constants';
-import { MemoryType } from '../../types';
+import type { MemoryType } from '../../types';
 import { cn } from '../../lib/utils';
 
 export default function PatientPortal() {
@@ -87,7 +87,7 @@ export default function PatientPortal() {
               exit={{ opacity: 0, y: -20 }}
               className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
             >
-              {MOCK_MEMORIES.filter(m => m.type === MemoryType.PHOTO).map((memory) => (
+              {MOCK_MEMORIES.filter(m => m.type === 'photo').map((memory) => (
                 <div key={memory.id} className="bg-posthog-sage dark:bg-slate-900 p-4 rounded-3xl shadow-md border border-posthog-border/50 dark:border-slate-800 hover:scale-[1.02] transition-transform cursor-pointer">
                   <div className="aspect-square rounded-2xl overflow-hidden mb-4">
                     <img src={memory.assetUrl} className="w-full h-full object-cover" alt="" />
