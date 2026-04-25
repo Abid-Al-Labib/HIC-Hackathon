@@ -1,0 +1,70 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import React, { useState } from 'react';
+import { UserRole } from './types';
+import PatientPortal from './components/portals/PatientPortal';
+import CaregiverPortal from './components/portals/CaregiverPortal';
+import DoctorPortal from './components/portals/DoctorPortal';
+import FacilityPortal from './components/portals/FacilityPortal';
+import { LogOut, User as UserIcon, Brain, Settings, LayoutDashboard } from 'lucide-react';
+import { cn } from './lib/utils';
+
+export default function App() {
+  const [currentRole, setCurrentRole] = useState<UserRole>(UserRole.PRIMARY_CAREGIVER);
+
+  // Helper to render the active portal
+  const renderPortal = () => {
+    switch (currentRole) {
+      case UserRole.PATIENT:
+        return <PatientPortal />;
+      case UserRole.PRIMARY_CAREGIVER:
+      case UserRole.FAMILY_CONTRIBUTOR:
+        return <CaregiverPortal role={currentRole} />;
+      case UserRole.DOCTOR:
+        return <DoctorPortal />;
+      case UserRole.FACILITY_STAFF:
+        return <FacilityPortal />;
+      default:
+        return <CaregiverPortal role={UserRole.PRIMARY_CAREGIVER} />;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-neutral-50 text-neutral-900 font-sans selection:bg-indigo-100">
+      {/* Role Switcher (Demo Only) */}
+      <div className="fixed bottom-4 left-4 z-50 flex items-center gap-2 p-2 bg-white rounded-full shadow-lg border border-neutral-200">
+        <div className="flex gap-1 text-[10px] font-bold uppercase tracking-wider text-neutral-400 px-3 border-r border-neutral-100">
+          Switched View:
+        </div>
+        {(Object.values(UserRole) as UserRole[]).map((role) => (
+          <button
+            key={role}
+            onClick={() => setCurrentRole(role)}
+            className={cn(
+              "px-3 py-1.5 rounded-full text-xs font-medium transition-all",
+              currentRole === role 
+                ? "bg-indigo-600 text-white shadow-sm" 
+                : "text-neutral-600 hover:bg-neutral-100"
+            )}
+          >
+            {role.replace('_', ' ')}
+          </button>
+        ))}
+      </div>
+
+      {/* Main Content Area */}
+      <main className="w-full">
+        {renderPortal()}
+      </main>
+    </div>
+  );
+}
+

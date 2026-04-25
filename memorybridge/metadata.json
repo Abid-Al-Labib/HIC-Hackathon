@@ -1,0 +1,13 @@
+{
+  "name": "MemoryBridge",
+  "description": "Personalized dementia care platform transforming cherished memories into therapeutic experiences.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "AI-powered reminiscence therapy",
+    "Multi-portal care coordination",
+    "Care transition summaries"
+  ]
+}

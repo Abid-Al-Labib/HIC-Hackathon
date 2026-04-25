@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import DashboardPage from "./pages/DashboardPage";
 import LandingPage from "./pages/LandingPage";
+import MemoryBridgePage from "./pages/MemoryBridgePage";
 
 type Theme = "light" | "dark";
 
@@ -35,6 +36,7 @@ function App() {
         path="/app"
         element={<DashboardPage theme={theme} onToggleTheme={toggleTheme} />}
       />
+      <Route path="/memorybridge" element={<MemoryBridgePage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
