@@ -1,19 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { motion } from "motion/react";
-import {
-  Brain,
-  Calendar,
-  Check,
-  Copy,
-  Edit3,
-  Heart,
-  History,
-  LayoutDashboard,
-  MailPlus,
-  Plus,
-  Send,
-  Users,
-} from "lucide-react";
+import { Brain, Calendar, Check, Copy, Edit3, Heart, History, LayoutDashboard, MailPlus, Plus, Send, Users } from "lucide-react";
 import type { Database, EmotionTag, LifePeriod, MemoryType, UserRole } from "../../types";
 import { useAuth } from "../../context/AuthContext";
 import {
@@ -32,9 +19,7 @@ interface CaregiverPortalProps {
   role: UserRole;
 }
 
-type MemoryRow = Database["public"]["Tables"]["memories"]["Row"] & {
-  profiles?: { id: string; full_name: string; profile_photo_url: string | null } | null;
-};
+type MemoryRow = Database["public"]["Tables"]["memories"]["Row"];
 
 const MEMORY_TYPES: MemoryType[] = ["story", "photo", "audio", "music", "sensory", "life_event"];
 const LIFE_PERIODS: LifePeriod[] = ["childhood", "young_adult", "middle_age", "recent"];
@@ -74,10 +59,8 @@ export default function CaregiverPortal({ role }: CaregiverPortalProps) {
   }, [patients, selectedPatientId]);
 
   useEffect(() => {
-    if (!selectedPatient?.id || !user) return;
-    setMemories(getDemoMemories(selectedPatient.id, user.id, user.role));
-    setInvites(isPrimaryCaregiver ? getDemoInvites(selectedPatient.id) : []);
-  }, [isPrimaryCaregiver, selectedPatient?.id, user]);
+    refreshDemoData();
+  }, [selectedPatient?.id, user?.id, user?.role, isPrimaryCaregiver]);
 
   function refreshDemoData() {
     if (!selectedPatient || !user) return;
@@ -89,7 +72,7 @@ export default function CaregiverPortal({ role }: CaregiverPortalProps) {
     return `${window.location.origin}/invite/${token}`;
   }
 
-  async function handleSendInvite(event: React.FormEvent) {
+  async function handleSendInvite(event: FormEvent) {
     event.preventDefault();
     if (!selectedPatient || !user || !inviteEmail.trim()) return;
     setSavingInvite(true);
@@ -98,8 +81,8 @@ export default function CaregiverPortal({ role }: CaregiverPortalProps) {
       const invite = createDemoInvite(selectedPatient.id, user.id, inviteEmail.trim());
       const link = buildInviteLink(invite.token);
       setLastInviteLink(link);
-      setInvites((current) => [invite, ...current]);
       setInviteEmail("");
+      refreshDemoData();
       await navigator.clipboard?.writeText(link);
       setNotice("Invite created and copied. Share the link with the contributor.");
     } catch (error: unknown) {
@@ -126,29 +109,24 @@ export default function CaregiverPortal({ role }: CaregiverPortalProps) {
     setForm(emptyMemoryForm);
   }
 
-  async function handleSaveMemory(event: React.FormEvent) {
+  async function handleSaveMemory(event: FormEvent) {
     event.preventDefault();
     if (!selectedPatient || !user || !form.title.trim()) return;
     setSavingMemory(true);
     setNotice(null);
     try {
+      const input = {
+        title: form.title.trim(),
+        description: form.description.trim(),
+        type: form.type,
+        lifePeriod: form.lifePeriod,
+        emotionTags: form.emotionTags,
+      };
       if (editingMemory) {
-        updateDemoMemory(editingMemory.id, user.role, {
-          title: form.title.trim(),
-          description: form.description.trim(),
-          type: form.type,
-          lifePeriod: form.lifePeriod,
-          emotionTags: form.emotionTags,
-        });
+        updateDemoMemory(editingMemory.id, user.role, input);
         setNotice("Memory updated.");
       } else {
-        createDemoMemory(selectedPatient.id, user.id, user.role, {
-          title: form.title.trim(),
-          description: form.description.trim(),
-          type: form.type,
-          lifePeriod: form.lifePeriod,
-          emotionTags: form.emotionTags,
-        });
+        createDemoMemory(selectedPatient.id, user.id, user.role, input);
         setNotice(isPrimaryCaregiver ? "Memory added to the vault." : "Memory submitted for caregiver review.");
       }
       resetMemoryForm();
@@ -167,6 +145,12 @@ export default function CaregiverPortal({ role }: CaregiverPortalProps) {
         ? current.emotionTags.filter((item) => item !== tag)
         : [...current.emotionTags, tag],
     }));
+  }
+
+  function changeMemoryStatus(memoryId: string, status: "approved" | "flagged") {
+    setDemoMemoryStatus(memoryId, status);
+    refreshDemoData();
+    setNotice(status === "approved" ? "Memory approved for therapy." : "Memory flagged for follow-up.");
   }
 
   const submittedCount = memories.filter((memory) => memory.status === "submitted").length;
@@ -232,28 +216,13 @@ export default function CaregiverPortal({ role }: CaregiverPortalProps) {
               {isPrimaryCaregiver ? "Invite family and approve their memory submissions." : "Share memories for caregiver review."}
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            {patients.length > 1 && (
-              <select
-                value={selectedPatient?.id ?? ""}
-                onChange={(event) => setSelectedPatientId(event.target.value)}
-                className="rounded-xl border border-posthog-border bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800"
-              >
-                {patients.map((patient) => (
-                  <option key={patient.id} value={patient.id}>
-                    {patient.preferred_name}
-                  </option>
-                ))}
-              </select>
-            )}
-            <button
-              onClick={() => setActiveTab("vault")}
-              className="flex items-center gap-2 px-4 py-2 bg-posthog-cta text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all"
-            >
-              <Plus size={18} />
-              Add Memory
-            </button>
-          </div>
+          <button
+            onClick={() => setActiveTab("vault")}
+            className="flex items-center gap-2 px-4 py-2 bg-posthog-cta text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all"
+          >
+            <Plus size={18} />
+            Add Memory
+          </button>
         </header>
 
         <main className="p-8 space-y-8">
@@ -271,23 +240,14 @@ export default function CaregiverPortal({ role }: CaregiverPortalProps) {
 
           {selectedPatient && activeTab === "dashboard" && (
             <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {[
-                  { label: "Total Memories", value: memories.length, sub: `${submittedCount} awaiting review`, icon: Heart },
-                  { label: "Approved", value: approvedCount, sub: "Ready for therapy", icon: Check },
-                  { label: "Current Week", value: `${selectedPatient.program_week} / 12`, sub: selectedPatient.program_status.replace("_", " "), icon: Calendar },
-                  { label: "Open Invites", value: invites.filter((invite) => invite.status === "pending").length, sub: "Pending contributors", icon: MailPlus },
-                ].map((stat) => (
-                  <div key={stat.label} className="bg-posthog-sage dark:bg-slate-900 p-6 rounded-[1.5rem] border border-posthog-border/50 dark:border-slate-800 shadow-sm">
-                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4 bg-posthog-light-sage/50 dark:bg-slate-800/50 text-posthog-orange">
-                      <stat.icon size={24} />
-                    </div>
-                    <div className="text-2xl font-bold text-posthog-deep-ink dark:text-slate-100">{stat.value}</div>
-                    <div className="text-sm font-medium text-posthog-ink/70 dark:text-slate-400 mt-1">{stat.label}</div>
-                    <div className="text-xs text-posthog-ink/60 dark:text-slate-500 mt-0.5 capitalize">{stat.sub}</div>
-                  </div>
-                ))}
-              </div>
+              <StatsGrid
+                memoryCount={memories.length}
+                submittedCount={submittedCount}
+                approvedCount={approvedCount}
+                inviteCount={invites.filter((invite) => invite.status === "pending").length}
+                week={selectedPatient.program_week}
+                programStatus={selectedPatient.program_status}
+              />
 
               <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
                 <section className="xl:col-span-2 bg-posthog-sage dark:bg-slate-900 rounded-[1.5rem] p-8 border border-posthog-border/50 dark:border-slate-800 shadow-sm">
@@ -299,39 +259,21 @@ export default function CaregiverPortal({ role }: CaregiverPortalProps) {
                   </div>
                   <MemoryList
                     memories={memories.slice(0, 5)}
-                    loading={false}
                     currentUserId={user?.id}
                     isPrimaryCaregiver={isPrimaryCaregiver}
                     onEdit={startEdit}
-                    onStatusChange={refreshDemoData}
+                    onStatusChange={changeMemoryStatus}
                   />
                 </section>
 
                 {isPrimaryCaregiver && (
-                  <section className="bg-indigo-900 text-white rounded-[1.5rem] p-8 shadow-xl shadow-posthog-orange/20">
-                    <div className="flex items-center gap-2 mb-4">
-                      <MailPlus size={20} className="text-indigo-300" />
-                      <span className="text-xs font-bold uppercase tracking-widest text-indigo-300">Invite family</span>
-                    </div>
-                    <form onSubmit={handleSendInvite} className="space-y-3">
-                      <input
-                        type="email"
-                        value={inviteEmail}
-                        onChange={(event) => setInviteEmail(event.target.value)}
-                        placeholder="family@example.com"
-                        className="w-full rounded-xl border border-indigo-700 bg-indigo-950/60 px-4 py-3 text-sm text-white placeholder:text-indigo-300 focus:outline-none focus:ring-2 focus:ring-emerald-300"
-                      />
-                      <button
-                        type="submit"
-                        disabled={savingInvite}
-                        className="w-full py-3 bg-emerald-400 text-indigo-950 font-bold rounded-xl text-sm hover:bg-emerald-300 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
-                      >
-                        <Send size={16} />
-                        {savingInvite ? "Creating invite..." : "Create Invite Link"}
-                      </button>
-                    </form>
-                    {lastInviteLink && <CopyableInviteLink link={lastInviteLink} />}
-                  </section>
+                  <InvitePanel
+                    inviteEmail={inviteEmail}
+                    lastInviteLink={lastInviteLink}
+                    savingInvite={savingInvite}
+                    onEmailChange={setInviteEmail}
+                    onSubmit={handleSendInvite}
+                  />
                 )}
               </div>
             </motion.div>
@@ -343,11 +285,10 @@ export default function CaregiverPortal({ role }: CaregiverPortalProps) {
                 <h3 className="text-xl font-bold text-posthog-deep-ink dark:text-slate-100 mb-6">Memory Vault</h3>
                 <MemoryList
                   memories={memories}
-                  loading={false}
                   currentUserId={user?.id}
                   isPrimaryCaregiver={isPrimaryCaregiver}
                   onEdit={startEdit}
-                  onStatusChange={refreshDemoData}
+                  onStatusChange={changeMemoryStatus}
                 />
               </section>
               <MemoryForm
@@ -375,7 +316,7 @@ export default function CaregiverPortal({ role }: CaregiverPortalProps) {
                         <div>
                           <p className="font-bold text-posthog-deep-ink dark:text-slate-100">{invite.invite_email}</p>
                           <p className="text-xs text-posthog-ink/60 dark:text-slate-400 capitalize">
-                            {invite.role.replace("_", " ")} · {invite.status}
+                            {invite.role.replace("_", " ")} | {invite.status}
                           </p>
                         </div>
                         <button
@@ -403,22 +344,12 @@ export default function CaregiverPortal({ role }: CaregiverPortalProps) {
               {isPrimaryCaregiver && (
                 <section className="bg-posthog-sage dark:bg-slate-900 rounded-[1.5rem] p-8 border border-posthog-border/50 dark:border-slate-800">
                   <h3 className="text-lg font-bold text-posthog-deep-ink dark:text-slate-100 mb-4">Send New Invite</h3>
-                  <form onSubmit={handleSendInvite} className="space-y-3">
-                    <input
-                      type="email"
-                      value={inviteEmail}
-                      onChange={(event) => setInviteEmail(event.target.value)}
-                      placeholder="family@example.com"
-                      className="w-full rounded-xl border border-posthog-border bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-800"
-                    />
-                    <button
-                      type="submit"
-                      disabled={savingInvite}
-                      className="w-full py-3 bg-posthog-cta text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition-all disabled:opacity-60"
-                    >
-                      {savingInvite ? "Creating invite..." : "Create Invite Link"}
-                    </button>
-                  </form>
+                  <InviteForm
+                    inviteEmail={inviteEmail}
+                    savingInvite={savingInvite}
+                    onEmailChange={setInviteEmail}
+                    onSubmit={handleSendInvite}
+                  />
                   {lastInviteLink && <CopyableInviteLink link={lastInviteLink} />}
                 </section>
               )}
@@ -439,22 +370,124 @@ export default function CaregiverPortal({ role }: CaregiverPortalProps) {
   );
 }
 
+function StatsGrid({
+  memoryCount,
+  submittedCount,
+  approvedCount,
+  inviteCount,
+  week,
+  programStatus,
+}: {
+  memoryCount: number;
+  submittedCount: number;
+  approvedCount: number;
+  inviteCount: number;
+  week: number;
+  programStatus: string;
+}) {
+  const stats = [
+    { label: "Total Memories", value: memoryCount, sub: `${submittedCount} awaiting review`, icon: Heart },
+    { label: "Approved", value: approvedCount, sub: "Ready for therapy", icon: Check },
+    { label: "Current Week", value: `${week} / 12`, sub: programStatus.replace("_", " "), icon: Calendar },
+    { label: "Open Invites", value: inviteCount, sub: "Pending contributors", icon: MailPlus },
+  ];
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {stats.map((stat) => (
+        <div key={stat.label} className="bg-posthog-sage dark:bg-slate-900 p-6 rounded-[1.5rem] border border-posthog-border/50 dark:border-slate-800 shadow-sm">
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4 bg-posthog-light-sage/50 dark:bg-slate-800/50 text-posthog-orange">
+            <stat.icon size={24} />
+          </div>
+          <div className="text-2xl font-bold text-posthog-deep-ink dark:text-slate-100">{stat.value}</div>
+          <div className="text-sm font-medium text-posthog-ink/70 dark:text-slate-400 mt-1">{stat.label}</div>
+          <div className="text-xs text-posthog-ink/60 dark:text-slate-500 mt-0.5 capitalize">{stat.sub}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function InvitePanel({
+  inviteEmail,
+  lastInviteLink,
+  savingInvite,
+  onEmailChange,
+  onSubmit,
+}: {
+  inviteEmail: string;
+  lastInviteLink: string;
+  savingInvite: boolean;
+  onEmailChange: (email: string) => void;
+  onSubmit: (event: FormEvent) => void;
+}) {
+  return (
+    <section className="bg-indigo-900 text-white rounded-[1.5rem] p-8 shadow-xl shadow-posthog-orange/20">
+      <div className="flex items-center gap-2 mb-4">
+        <MailPlus size={20} className="text-indigo-300" />
+        <span className="text-xs font-bold uppercase tracking-widest text-indigo-300">Invite family</span>
+      </div>
+      <InviteForm inviteEmail={inviteEmail} savingInvite={savingInvite} onEmailChange={onEmailChange} onSubmit={onSubmit} dark />
+      {lastInviteLink && <CopyableInviteLink link={lastInviteLink} />}
+    </section>
+  );
+}
+
+function InviteForm({
+  inviteEmail,
+  savingInvite,
+  onEmailChange,
+  onSubmit,
+  dark = false,
+}: {
+  inviteEmail: string;
+  savingInvite: boolean;
+  onEmailChange: (email: string) => void;
+  onSubmit: (event: FormEvent) => void;
+  dark?: boolean;
+}) {
+  return (
+    <form onSubmit={onSubmit} className="space-y-3">
+      <input
+        type="email"
+        required
+        value={inviteEmail}
+        onChange={(event) => onEmailChange(event.target.value)}
+        placeholder="family@example.com"
+        className={cn(
+          "w-full rounded-xl border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300",
+          dark
+            ? "border-indigo-700 bg-indigo-950/60 text-white placeholder:text-indigo-300"
+            : "border-posthog-border bg-white dark:border-slate-700 dark:bg-slate-800",
+        )}
+      />
+      <button
+        type="submit"
+        disabled={savingInvite}
+        className={cn(
+          "w-full py-3 rounded-xl font-bold text-sm transition-all disabled:opacity-60 flex items-center justify-center gap-2",
+          dark ? "bg-emerald-400 text-indigo-950 hover:bg-emerald-300" : "bg-posthog-cta text-white hover:bg-indigo-700",
+        )}
+      >
+        <Send size={16} />
+        {savingInvite ? "Creating invite..." : "Create Invite Link"}
+      </button>
+    </form>
+  );
+}
+
 function MemoryList({
   memories,
-  loading,
   currentUserId,
   isPrimaryCaregiver,
   onEdit,
   onStatusChange,
 }: {
   memories: MemoryRow[];
-  loading: boolean;
   currentUserId?: string;
   isPrimaryCaregiver: boolean;
   onEdit: (memory: MemoryRow) => void;
-  onStatusChange: () => void;
+  onStatusChange: (memoryId: string, status: "approved" | "flagged") => void;
 }) {
-  if (loading) return <p className="text-sm text-posthog-ink/70 dark:text-slate-400">Loading memories...</p>;
   if (!memories.length) return <p className="text-sm text-posthog-ink/70 dark:text-slate-400">No memories yet.</p>;
 
   return (
@@ -472,31 +505,25 @@ function MemoryList({
               </div>
               <p className="mt-1 line-clamp-2 text-sm text-posthog-ink/70 dark:text-slate-400">{memory.description}</p>
               <p className="mt-2 text-xs text-posthog-ink/60 dark:text-slate-500 capitalize">
-                {memory.type} · {(memory.life_period ?? "unspecified").replace("_", " ")}
+                {memory.type} | {(memory.life_period ?? "unspecified").replace("_", " ")}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
               {isPrimaryCaregiver && memory.status === "submitted" && (
-                <button
-                  onClick={() => {
-                    setDemoMemoryStatus(memory.id, "approved");
-                    onStatusChange();
-                  }}
-                  className="rounded-xl bg-emerald-500 px-3 py-2 text-sm font-bold text-white hover:bg-emerald-600"
-                >
-                  Approve
-                </button>
-              )}
-              {isPrimaryCaregiver && memory.status === "submitted" && (
-                <button
-                  onClick={() => {
-                    setDemoMemoryStatus(memory.id, "flagged");
-                    onStatusChange();
-                  }}
-                  className="rounded-xl border border-posthog-border px-3 py-2 text-sm font-bold text-posthog-orange hover:bg-white dark:border-slate-700 dark:hover:bg-slate-900"
-                >
-                  Flag
-                </button>
+                <>
+                  <button
+                    onClick={() => onStatusChange(memory.id, "approved")}
+                    className="rounded-xl bg-emerald-500 px-3 py-2 text-sm font-bold text-white hover:bg-emerald-600"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    onClick={() => onStatusChange(memory.id, "flagged")}
+                    className="rounded-xl border border-posthog-border px-3 py-2 text-sm font-bold text-posthog-orange hover:bg-white dark:border-slate-700 dark:hover:bg-slate-900"
+                  >
+                    Flag
+                  </button>
+                </>
               )}
               {canEdit && (
                 <button
@@ -530,7 +557,7 @@ function MemoryForm({
   saving: boolean;
   isPrimaryCaregiver: boolean;
   onCancel: () => void;
-  onSubmit: (event: React.FormEvent) => void;
+  onSubmit: (event: FormEvent) => void;
   onChange: (form: typeof emptyMemoryForm) => void;
   onToggleEmotion: (tag: EmotionTag) => void;
 }) {

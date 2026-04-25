@@ -12,7 +12,7 @@ export default {
           ink: "#4d4f46",
           "deep-ink": "#23251d",
           border: "#bfc1b7",
-          orange: "#F54E00",
+          orange: "#f28cab",
           cta: "#1e1f23"
         }
       },

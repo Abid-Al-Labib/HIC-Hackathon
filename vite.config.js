@@ -36,17 +36,28 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
+import fs from "node:fs";
+import path from "node:path";
 // Server-only env vars (no VITE_ prefix) that the dev middleware needs to
 // expose to api/* handlers via process.env. In production on Vercel these
 // come from the project settings automatically.
 var SERVER_ENV_KEYS = ["ELEVENLABS_API_KEY", "ELEVENLABS_VOICE_ID"];
+/**
+ * Mounts every file under `api/elevenlabs/<name>.ts` as `/api/elevenlabs/<name>`
+ * during `vite dev`, so the same handlers used by Vercel in production also
+ * work locally without `vercel dev` or any extra server.
+ *
+ * This is a generic file-based router for our small API surface. New routes
+ * placed in `api/elevenlabs/` are picked up automatically.
+ */
 function elevenLabsDevApi() {
+    var apiDir = path.resolve(process.cwd(), "api/elevenlabs");
     return {
         name: "elevenlabs-dev-api",
         configureServer: function (server) {
             var _this = this;
-            server.middlewares.use("/api/elevenlabs/tts", function (req, res, next) { return __awaiter(_this, void 0, void 0, function () {
-                var mod, handler, err_1;
+            server.middlewares.use("/api/elevenlabs", function (req, res, next) { return __awaiter(_this, void 0, void 0, function () {
+                var rawPath, cleaned, filePath, moduleSpecifier, mod, handler, err_1;
                 var _a;
                 return __generator(this, function (_b) {
                     switch (_b.label) {
@@ -54,7 +65,7 @@ function elevenLabsDevApi() {
                             if (req.method === "OPTIONS") {
                                 res.setHeader("Access-Control-Allow-Origin", "*");
                                 res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-                                res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+                                res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-Voice-Name, X-Voice-Description, X-Language-Code");
                                 res.statusCode = 204;
                                 res.end();
                                 return [2 /*return*/];
@@ -63,16 +74,33 @@ function elevenLabsDevApi() {
                                 next();
                                 return [2 /*return*/];
                             }
+                            rawPath = (req.url || "").split("?")[0];
+                            cleaned = rawPath.replace(/^\/+/, "").replace(/\.\.+/g, "");
+                            if (!cleaned || !/^[a-z0-9_\-/]+$/i.test(cleaned)) {
+                                next();
+                                return [2 /*return*/];
+                            }
+                            filePath = path.join(apiDir, "".concat(cleaned, ".ts"));
+                            if (!filePath.startsWith(apiDir + path.sep) &&
+                                filePath !== "".concat(apiDir, ".ts")) {
+                                // Defense-in-depth against path traversal.
+                                next();
+                                return [2 /*return*/];
+                            }
+                            if (!fs.existsSync(filePath)) {
+                                next();
+                                return [2 /*return*/];
+                            }
+                            moduleSpecifier = "/api/elevenlabs/".concat(cleaned, ".ts");
                             _b.label = 1;
                         case 1:
                             _b.trys.push([1, 4, , 5]);
-                            return [4 /*yield*/, server.ssrLoadModule("/api/elevenlabs/tts.ts")];
+                            return [4 /*yield*/, server.ssrLoadModule(moduleSpecifier)];
                         case 2:
                             mod = _b.sent();
-                            handler = mod
-                                .default;
+                            handler = mod.default;
                             if (typeof handler !== "function") {
-                                throw new Error("api/elevenlabs/tts.ts does not export a default handler");
+                                throw new Error("".concat(moduleSpecifier, " does not export a default handler"));
                             }
                             return [4 /*yield*/, handler(req, res)];
                         case 3:
@@ -81,7 +109,7 @@ function elevenLabsDevApi() {
                         case 4:
                             err_1 = _b.sent();
                             // eslint-disable-next-line no-console
-                            console.error("[/api/elevenlabs/tts]", err_1);
+                            console.error("[".concat(moduleSpecifier, "]"), err_1);
                             if (!res.writableEnded) {
                                 res.statusCode = 500;
                                 res.setHeader("Content-Type", "application/json; charset=utf-8");
