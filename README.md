@@ -17,8 +17,17 @@ Minimal starter for:
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
    - `VITE_GEMINI_API_KEY`
+   - `ELEVENLABS_API_KEY` (server-only, used by `/api/elevenlabs/tts`)
+   - `ELEVENLABS_VOICE_ID` (server-only fallback voice when the request omits one)
 4. Run app:
    - `npm run dev`
+
+## ElevenLabs Narration
+
+- Server route: `POST /api/elevenlabs/tts` — body `{ scriptText, voiceId?, voiceSettings?, modelId? }`, returns `audio/mpeg`.
+- Frontend helper: `generateNarrationAudio(...)` in `src/lib/elevenlabs.ts`.
+- UI: open the Caregiver portal and pick **Narration Studio** in the sidebar.
+- Cloned voices must only be used with the explicit consent of the person whose voice was cloned.
 
 ## Build
 

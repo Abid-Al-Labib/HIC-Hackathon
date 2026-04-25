@@ -1,6 +1,8 @@
 import { supabase } from "../supabase";
 import type { UserRole } from "../database.types";
 
+export type InviteRow = Awaited<ReturnType<typeof getInvites>>[number];
+
 export async function sendInvite(
   patientId: string,
   invitedBy: string,
@@ -26,6 +28,16 @@ export async function getInvites(patientId: string) {
   return data;
 }
 
+export async function getInviteByToken(token: string) {
+  const { data, error } = await supabase
+    .from("invites")
+    .select("*")
+    .eq("token", token)
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 export async function acceptInvite(token: string, profileId: string) {
   const { data: invite, error: fetchError } = await supabase
     .from("invites")
@@ -47,7 +59,7 @@ export async function acceptInvite(token: string, profileId: string) {
     role: invite.role,
     accepted_at: new Date().toISOString(),
   });
-  if (collabError) throw collabError;
+  if (collabError && collabError.code !== "23505") throw collabError;
 
   await supabase.from("invites").update({ status: "accepted" }).eq("id", invite.id);
   return invite;

@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { UserRole } from '../types';
 import PatientPortal from '../components/portals/PatientPortal';
 import CaregiverPortal from '../components/portals/CaregiverPortal';
 import DoctorPortal from '../components/portals/DoctorPortal';
 import FacilityPortal from '../components/portals/FacilityPortal';
+import { useAuth } from '../context/AuthContext';
 import { cn } from '../lib/utils';
 
 const ALL_ROLES: UserRole[] = ['patient', 'primary_caregiver', 'family_contributor', 'doctor', 'facility_staff'];
@@ -17,7 +18,12 @@ const ROLE_LABELS: Record<UserRole, string> = {
 };
 
 export default function MemoryBridgePage() {
+  const { user } = useAuth();
   const [currentRole, setCurrentRole] = useState<UserRole>('primary_caregiver');
+
+  useEffect(() => {
+    if (user?.role) setCurrentRole(user.role);
+  }, [user?.role]);
 
   const renderPortal = () => {
     switch (currentRole) {

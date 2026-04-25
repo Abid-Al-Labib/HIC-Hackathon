@@ -8,9 +8,9 @@ import { useAuth } from "./context/AuthContext";
 type Theme = "light" | "dark";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { session, loading } = useAuth();
+  const { user, loading } = useAuth();
   if (loading) return null;
-  if (!session) return <Navigate to="/auth" replace />;
+  if (!user) return <Navigate to="/auth" replace />;
   return <>{children}</>;
 }
 
@@ -34,6 +34,7 @@ function App() {
     <Routes>
       <Route path="/" element={<LandingPage theme={theme} onToggleTheme={toggleTheme} />} />
       <Route path="/auth" element={<AuthPage />} />
+      <Route path="/invite/:token" element={<AuthPage />} />
       <Route
         path="/app"
         element={

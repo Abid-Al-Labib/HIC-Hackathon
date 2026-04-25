@@ -1,53 +1,32 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import type { Session, User } from "@supabase/supabase-js";
-import { supabase } from "../lib/supabase";
-import type { Database } from "../lib/database.types";
-
-type Profile = Database["public"]["Tables"]["profiles"]["Row"];
+import { getDemoSession, demoSignOut, type DemoAccount } from "../lib/demo-auth";
+import type { UserRole } from "../lib/database.types";
 
 interface AuthContextValue {
-  session: Session | null;
-  user: User | null;
-  profile: Profile | null;
+  user: DemoAccount | null;
+  role: UserRole | null;
   loading: boolean;
-  signOut: () => Promise<void>;
+  signOut: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [user, setUser] = useState<DemoAccount | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      if (data.session?.user) fetchProfile(data.session.user.id);
-      else setLoading(false);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession);
-      if (newSession?.user) fetchProfile(newSession.user.id);
-      else { setProfile(null); setLoading(false); }
-    });
-
-    return () => subscription.unsubscribe();
+    setUser(getDemoSession());
+    setLoading(false);
   }, []);
 
-  async function fetchProfile(userId: string) {
-    const { data } = await supabase.from("profiles").select("*").eq("id", userId).single();
-    setProfile(data);
-    setLoading(false);
-  }
-
-  async function signOut() {
-    await supabase.auth.signOut();
+  function signOut() {
+    demoSignOut();
+    setUser(null);
   }
 
   return (
-    <AuthContext.Provider value={{ session, user: session?.user ?? null, profile, loading, signOut }}>
+    <AuthContext.Provider value={{ user, role: user?.role ?? null, loading, signOut }}>
       {children}
     </AuthContext.Provider>
   );
