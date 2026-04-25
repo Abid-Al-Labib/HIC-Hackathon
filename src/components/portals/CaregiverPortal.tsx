@@ -21,7 +21,6 @@ import {
   Users,
 } from "lucide-react";
 import type { Database, EmotionTag, LifePeriod, MemoryType, UserRole } from "../../types";
-import { useAuth } from "../../context/AuthContext";
 import { AI_PROGRAM_WEEKS, BRIDGE_SUMMARY } from "../../constants";
 import {
   createDemoInvite,
@@ -40,6 +39,11 @@ interface CaregiverPortalProps {
 }
 
 type MemoryRow = Database["public"]["Tables"]["memories"]["Row"];
+
+const DEMO_USERS: Record<"primary_caregiver" | "family_contributor", { id: string; role: UserRole; displayName: string }> = {
+  primary_caregiver: { id: "demo-caregiver", role: "primary_caregiver", displayName: "Elaine Ellis" },
+  family_contributor: { id: "demo-family", role: "family_contributor", displayName: "Michael Ellis" },
+};
 
 function getAiReview(memory: MemoryRow) {
   const text = `${memory.title} ${memory.description ?? ""}`.toLowerCase();
@@ -74,9 +78,9 @@ const emptyMemoryForm = {
 };
 
 export default function CaregiverPortal({ role }: CaregiverPortalProps) {
-  const { user, signOut } = useAuth();
+  const user = role === "family_contributor" ? DEMO_USERS.family_contributor : DEMO_USERS.primary_caregiver;
   const shouldOpenMemoryInput = new URLSearchParams(window.location.search).get("addMemory") === "1";
-  const patients = useMemo(() => (user ? getDemoPatientsForUser(user.id, user.role) : []), [user]);
+  const patients = useMemo(() => getDemoPatientsForUser(user.id, user.role), [user.id, user.role]);
   const [activeTab, setActiveTab] = useState<"dashboard" | "vault" | "program" | "summary" | "family">("dashboard");
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
@@ -94,7 +98,7 @@ export default function CaregiverPortal({ role }: CaregiverPortalProps) {
     () => patients.find((patient) => patient.id === selectedPatientId) ?? patients[0] ?? null,
     [patients, selectedPatientId],
   );
-  const isPrimaryCaregiver = role === "primary_caregiver" || user?.role === "primary_caregiver";
+  const isPrimaryCaregiver = role === "primary_caregiver";
 
   useEffect(() => {
     if (!selectedPatientId && patients[0]) setSelectedPatientId(patients[0].id);
@@ -102,7 +106,7 @@ export default function CaregiverPortal({ role }: CaregiverPortalProps) {
 
   useEffect(() => {
     refreshDemoData();
-  }, [selectedPatient?.id, user?.id, user?.role, isPrimaryCaregiver]);
+  }, [selectedPatient?.id, user.id, user.role, isPrimaryCaregiver]);
 
   useEffect(() => {
     if (!shouldOpenMemoryInput) return;
@@ -112,18 +116,18 @@ export default function CaregiverPortal({ role }: CaregiverPortalProps) {
   }, [shouldOpenMemoryInput]);
 
   function refreshDemoData() {
-    if (!selectedPatient || !user) return;
+    if (!selectedPatient) return;
     setMemories(getDemoMemories(selectedPatient.id, user.id, user.role));
     setInvites(isPrimaryCaregiver ? getDemoInvites(selectedPatient.id) : []);
   }
 
   function buildInviteLink(token: string) {
-    return `${window.location.origin}/invite/${token}`;
+    return `${window.location.origin}/app?role=family_contributor&addMemory=1&invite=${token}`;
   }
 
   async function handleSendInvite(event: FormEvent) {
     event.preventDefault();
-    if (!selectedPatient || !user || !inviteEmail.trim()) return;
+    if (!selectedPatient || !inviteEmail.trim()) return;
     setSavingInvite(true);
     setNotice(null);
     try {
@@ -143,7 +147,7 @@ export default function CaregiverPortal({ role }: CaregiverPortalProps) {
 
   async function handleProgramInvite(week: number, theme: string, event: FormEvent) {
     event.preventDefault();
-    if (!selectedPatient || !user || !programInviteEmails[week]?.trim()) return;
+    if (!selectedPatient || !programInviteEmails[week]?.trim()) return;
     setSavingInvite(true);
     setNotice(null);
     try {
@@ -180,7 +184,7 @@ export default function CaregiverPortal({ role }: CaregiverPortalProps) {
 
   async function handleSaveMemory(event: FormEvent) {
     event.preventDefault();
-    if (!selectedPatient || !user || !form.title.trim()) return;
+    if (!selectedPatient || !form.title.trim()) return;
     setSavingMemory(true);
     setNotice(null);
     try {
@@ -264,14 +268,12 @@ export default function CaregiverPortal({ role }: CaregiverPortalProps) {
         <div className="mt-auto p-6 border-t border-posthog-border/50 dark:border-slate-800">
           <div className="p-3 bg-posthog-parchment dark:bg-[#111827] rounded-2xl">
             <p className="text-sm font-bold text-posthog-deep-ink dark:text-slate-100 truncate">
-              {user?.displayName ?? "MemoryBridge user"}
+              {user.displayName}
             </p>
             <p className="text-xs text-posthog-ink/70 dark:text-slate-500 capitalize truncate">
-              {(user?.role ?? role).replace(/_/g, " ")}
+              {user.role.replace(/_/g, " ")}
             </p>
-            <button onClick={signOut} className="mt-3 text-xs font-bold text-posthog-orange hover:underline">
-              Sign out
-            </button>
+            <p className="mt-3 text-xs font-bold text-posthog-orange">No auth demo mode</p>
           </div>
         </div>
       </aside>
@@ -360,7 +362,7 @@ export default function CaregiverPortal({ role }: CaregiverPortalProps) {
                 )}
                 <MemoryList
                   memories={memories}
-                  currentUserId={user?.id}
+                  currentUserId={user.id}
                   isPrimaryCaregiver={isPrimaryCaregiver}
                   onEdit={startEdit}
                   onStatusChange={changeMemoryStatus}
