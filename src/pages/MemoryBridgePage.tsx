@@ -34,10 +34,10 @@ export default function MemoryBridgePage() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50 text-neutral-900 font-sans">
+    <div className="min-h-screen bg-posthog-parchment dark:bg-[#111827] text-posthog-deep-ink dark:text-slate-100 font-sans">
       {/* Demo role switcher — floating bottom-left */}
-      <div className="fixed bottom-4 left-4 z-50 flex items-center gap-2 p-2 bg-white rounded-full shadow-lg border border-neutral-200">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 px-3 border-r border-neutral-100 whitespace-nowrap">
+      <div className="fixed bottom-4 left-4 z-50 flex items-center gap-2 p-2 bg-posthog-sage dark:bg-slate-900 rounded-full shadow-lg border border-posthog-border dark:border-slate-700">
+        <span className="text-[10px] font-bold uppercase tracking-wider text-posthog-ink/60 dark:text-slate-500 px-3 border-r border-posthog-border/50 dark:border-slate-800 whitespace-nowrap">
           Switch View
         </span>
         {(Object.values(UserRole) as UserRole[]).map((role) => (
@@ -47,8 +47,8 @@ export default function MemoryBridgePage() {
             className={cn(
               "px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap",
               currentRole === role
-                ? "bg-indigo-600 text-white shadow-sm"
-                : "text-neutral-600 hover:bg-neutral-100"
+                ? "bg-posthog-cta text-white shadow-sm"
+                : "text-posthog-ink/80 dark:text-slate-300 hover:bg-posthog-light-sage dark:bg-slate-800"
             )}
           >
             {ROLE_LABELS[role]}
