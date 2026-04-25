@@ -10,11 +10,11 @@ export interface DemoAccount {
 }
 
 export const DEMO_ACCOUNTS: DemoAccount[] = [
-  { id: "demo-caregiver", username: "caregiver", password: "demo123", role: "primary_caregiver", displayName: "Sarah Johnson" },
-  { id: "demo-family",    username: "family",    password: "demo123", role: "family_contributor", displayName: "Thomas Johnson" },
-  { id: "demo-doctor",    username: "doctor",    password: "demo123", role: "doctor",             displayName: "Dr. Patricia Lee" },
-  { id: "demo-facility",  username: "facility",  password: "demo123", role: "facility_staff",     displayName: "Nurse Maria Santos" },
-  { id: "demo-patient",   username: "patient",   password: "demo123", role: "patient",            displayName: "Eleanor Johnson" },
+  { id: "demo-caregiver", username: "caregiver", password: "demo1234", role: "primary_caregiver", displayName: "Elaine Ellis" },
+  { id: "demo-family",    username: "family",    password: "demo1234", role: "family_contributor", displayName: "Michael Ellis" },
+  { id: "demo-doctor",    username: "doctor",    password: "demo1234", role: "doctor",             displayName: "Dr. Patricia Lee" },
+  { id: "demo-facility",  username: "facility",  password: "demo1234", role: "facility_staff",     displayName: "Nurse Maria Santos" },
+  { id: "demo-patient",   username: "patient",   password: "demo1234", role: "patient",            displayName: "Robert Ellis" },
 ];
 
 const STORAGE_KEY = "mb_demo_user";
@@ -53,7 +53,7 @@ export function createInvitedDemoAccount(email: string, token: string): DemoAcco
   const account: DemoAccount = {
     id: `demo-invite-${token}`,
     username,
-    password: "demo123",
+    password: "demo1234",
     role: "family_contributor",
     displayName,
     email: username,

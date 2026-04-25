@@ -53,7 +53,7 @@ export default function DoctorPortal() {
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-full bg-slate-200" />
             <div>
-              <p className="text-xs font-bold text-posthog-deep-ink dark:text-slate-100">Dr. Aris Thorne</p>
+              <p className="text-xs font-bold text-posthog-deep-ink dark:text-slate-100">Dr. Patricia Lee</p>
               <p className="text-[10px] text-posthog-ink/70 dark:text-posthog-ink/60 dark:text-slate-500 font-medium">Neurologist</p>
             </div>
           </div>
@@ -179,7 +179,7 @@ export default function DoctorPortal() {
               <div className="space-y-6">
                 {[
                   { date: 'Oct 22', note: 'Patient showed high response to audio recordings from grandson. Agitation decreased by 30% after 10-minute exposure.', physician: 'Nurse Miller' },
-                  { date: 'Oct 19', note: 'Visual stimuli from childhood home (Gary, Indiana) triggered lucid verbal communication of 5+ sentences.', physician: 'Dr. Thorne' }
+                  { date: 'Oct 19', note: 'Visual stimuli from childhood home (his first classroom) triggered lucid verbal communication of 5+ sentences.', physician: 'Dr. Lee' }
                 ].map((item, i) => (
                   <div key={i} className="flex gap-6 pb-6 border-b border-slate-50 last:border-0 last:pb-0 group">
                     <div className="shrink-0 w-16 text-[10px] font-black text-posthog-ink/60 dark:text-slate-500 uppercase pt-1">{item.date}</div>
@@ -228,9 +228,9 @@ export default function DoctorPortal() {
               <h3 className="text-lg font-bold text-posthog-deep-ink dark:text-slate-100 mb-6 tracking-tight">Active Alerts</h3>
               <div className="space-y-4">
                 {[
-                  { label: 'Missed Input', patient: 'Arthur B.', urgency: 'low' },
-                  { label: 'Low Engagement', patient: 'Maria G.', urgency: 'high' },
-                  { label: 'Mood Shift', patient: 'Ellie J.', urgency: 'med' }
+                  { label: 'Missed Input', patient: 'Robert E.', urgency: 'low' },
+                  { label: 'Low Engagement', patient: 'Robert E.', urgency: 'high' },
+                  { label: 'Mood Shift', patient: 'Robert E.', urgency: 'med' }
                 ].map((alert, i) => (
                   <div key={i} className="flex items-center gap-4 p-4 rounded-2xl bg-[#F8FAFC] border border-slate-50 ring-1 ring-slate-100 group cursor-pointer hover:ring-indigo-100 transition-all">
                     <div className={`w-2 h-2 rounded-full ${alert.urgency === 'high' ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]' : alert.urgency === 'med' ? 'bg-amber-500' : 'bg-slate-300'}`} />

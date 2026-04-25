@@ -1,4 +1,5 @@
 import type { Database, EmotionTag, LifePeriod, MemoryStatus, MemoryType, UserRole } from "./database.types";
+import { MOCK_MEMORIES } from "../constants";
 
 type PatientRow = Database["public"]["Tables"]["patients"]["Row"];
 type MemoryRow = Database["public"]["Tables"]["memories"]["Row"];
@@ -24,18 +25,18 @@ export type DemoMemoryInput = {
   emotionTags: EmotionTag[];
 };
 
-const PATIENTS_KEY = "mb_demo_patients";
-const MEMORIES_KEY = "mb_demo_memories";
-const INVITES_KEY = "mb_demo_invites";
+const PATIENTS_KEY = "mb_demo_v2_patients";
+const MEMORIES_KEY = "mb_demo_v2_memories";
+const INVITES_KEY = "mb_demo_v2_invites";
 
 const DEMO_PATIENT: PatientRow = {
   id: "demo-patient-profile",
   user_id: "demo-patient",
-  first_name: "Eleanor",
-  last_name: "Johnson",
-  preferred_name: "Ellie",
-  date_of_birth: "1942-05-12",
-  diagnosis_date: "2022-11-20",
+  first_name: "Robert",
+  last_name: "Ellis",
+  preferred_name: "Robert",
+  date_of_birth: "1948-03-18",
+  diagnosis_date: "2024-01-12",
   dementia_type: "alzheimers",
   stage: "moderate",
   primary_caregiver_id: "demo-caregiver",
@@ -48,28 +49,20 @@ const DEMO_PATIENT: PatientRow = {
   updated_at: new Date().toISOString(),
 };
 
-const DEMO_MEMORIES: MemoryRow[] = [
+const DEMO_MEMORIES: MemoryRow[] = MOCK_MEMORIES.map((memory, index) =>
   makeMemory({
-    id: "demo-memory-apple-pie",
-    contributorId: "demo-caregiver",
-    title: "Thanksgiving Apple Pie",
-    description: "Ellie made apple pie every Thanksgiving at 42 Maple Street. Cinnamon, coffee, and family voices filled the kitchen.",
-    type: "story",
-    lifePeriod: "middle_age",
-    emotionTags: ["joyful", "loving"],
-    status: "approved",
+    id: memory.id,
+    contributorId: memory.contributorId,
+    title: memory.title,
+    description: memory.description,
+    type: memory.type,
+    lifePeriod: memory.lifePeriod,
+    emotionTags: memory.emotionTags as EmotionTag[],
+    status: index === 2 ? "submitted" : "approved",
+    sensoryCues: memory.sensoryCues,
+    patientDisplay: memory.patientDisplay,
   }),
-  makeMemory({
-    id: "demo-memory-wedding",
-    contributorId: "demo-family",
-    title: "Wedding Day at St. Mary's",
-    description: "A warm June afternoon outside St. Mary's Church, with Robert holding Ellie's hand and everyone laughing on the steps.",
-    type: "photo",
-    lifePeriod: "young_adult",
-    emotionTags: ["joyful", "peaceful"],
-    status: "submitted",
-  }),
-];
+);
 
 export function getDemoPatientsForUser(userId: string, role: UserRole): PatientRow[] {
   const patients = readPatients();
@@ -208,6 +201,8 @@ function makeMemory({
   lifePeriod,
   emotionTags,
   status,
+  sensoryCues,
+  patientDisplay,
 }: {
   id: string;
   contributorId: string;
@@ -217,6 +212,8 @@ function makeMemory({
   lifePeriod: LifePeriod;
   emotionTags: EmotionTag[];
   status: MemoryStatus;
+  sensoryCues?: string[];
+  patientDisplay?: string;
 }): MemoryRow {
   const now = new Date().toISOString();
   return {
@@ -232,10 +229,10 @@ function makeMemory({
     location_name: null,
     location_lat: null,
     location_lng: null,
-    sensory_cues: { smells: [], sounds: [], textures: [], tastes: [] },
+    sensory_cues: { cues: sensoryCues ?? [] },
     therapeutic_score: status === "approved" ? 5 : null,
     status,
-    ai_conversation_log: null,
+    ai_conversation_log: patientDisplay ? { patientDisplay } : null,
     program_week: 4,
     created_at: now,
     updated_at: now,

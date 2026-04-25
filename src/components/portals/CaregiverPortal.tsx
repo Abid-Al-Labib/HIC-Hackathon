@@ -1,8 +1,27 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { motion } from "motion/react";
-import { Brain, Calendar, Check, Copy, Edit3, Heart, History, LayoutDashboard, MailPlus, Plus, Send, Users } from "lucide-react";
+import {
+  Activity,
+  Brain,
+  Building2,
+  Calendar,
+  Check,
+  Copy,
+  Edit3,
+  FileText,
+  Heart,
+  History,
+  LayoutDashboard,
+  MailPlus,
+  Plus,
+  Send,
+  Share2,
+  Sparkles,
+  Users,
+} from "lucide-react";
 import type { Database, EmotionTag, LifePeriod, MemoryType, UserRole } from "../../types";
 import { useAuth } from "../../context/AuthContext";
+import { AI_PROGRAM_WEEKS, BRIDGE_SUMMARY } from "../../constants";
 import {
   createDemoInvite,
   createDemoMemory,
@@ -36,7 +55,7 @@ const emptyMemoryForm = {
 export default function CaregiverPortal({ role }: CaregiverPortalProps) {
   const { user, signOut } = useAuth();
   const patients = useMemo(() => (user ? getDemoPatientsForUser(user.id, user.role) : []), [user]);
-  const [activeTab, setActiveTab] = useState<"dashboard" | "vault" | "program" | "family">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "vault" | "program" | "summary" | "family">("dashboard");
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
   const [invites, setInvites] = useState<DemoInvite[]>([]);
@@ -171,7 +190,8 @@ export default function CaregiverPortal({ role }: CaregiverPortalProps) {
             {[
               { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
               { id: "vault", label: "Memory Vault", icon: History },
-              { id: "program", label: "12-Week Program", icon: Calendar },
+              { id: "program", label: "AI Program", icon: Calendar },
+              { id: "summary", label: "Bridge Summary", icon: FileText },
               { id: "family", label: "Family & Invites", icon: Users },
             ].map((item) => (
               <button
@@ -252,18 +272,20 @@ export default function CaregiverPortal({ role }: CaregiverPortalProps) {
               <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
                 <section className="xl:col-span-2 bg-posthog-sage dark:bg-slate-900 rounded-[1.5rem] p-8 border border-posthog-border/50 dark:border-slate-800 shadow-sm">
                   <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-xl font-bold text-posthog-deep-ink dark:text-slate-100">Recent Memory Submissions</h3>
-                    <button onClick={() => setActiveTab("vault")} className="text-posthog-orange font-bold text-sm hover:underline">
-                      View vault
+                    <h3 className="text-xl font-bold text-posthog-deep-ink dark:text-slate-100">AI-Assembled Care Plan</h3>
+                    <button onClick={() => setActiveTab("program")} className="text-posthog-orange font-bold text-sm hover:underline">
+                      View 12 weeks
                     </button>
                   </div>
-                  <MemoryList
-                    memories={memories.slice(0, 5)}
-                    currentUserId={user?.id}
-                    isPrimaryCaregiver={isPrimaryCaregiver}
-                    onEdit={startEdit}
-                    onStatusChange={changeMemoryStatus}
-                  />
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {AI_PROGRAM_WEEKS.slice(1, 4).map((week) => (
+                      <div key={week.week} className="rounded-2xl border border-posthog-border bg-posthog-parchment p-4 dark:border-slate-700 dark:bg-slate-800">
+                        <p className="text-xs font-black uppercase tracking-widest text-posthog-orange">Week {week.week}</p>
+                        <h4 className="mt-2 font-bold text-posthog-deep-ink dark:text-slate-100">{week.theme}</h4>
+                        <p className="mt-2 text-sm text-posthog-ink/70 dark:text-slate-400">{week.therapySession}</p>
+                      </div>
+                    ))}
+                  </div>
                 </section>
 
                 {isPrimaryCaregiver && (
@@ -357,15 +379,153 @@ export default function CaregiverPortal({ role }: CaregiverPortalProps) {
           )}
 
           {selectedPatient && activeTab === "program" && (
-            <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-posthog-sage dark:bg-slate-900 rounded-[1.5rem] p-8 border border-posthog-border/50 dark:border-slate-800">
-              <h3 className="text-xl font-bold text-posthog-deep-ink dark:text-slate-100 mb-3">12-Week Program</h3>
-              <p className="text-posthog-ink/70 dark:text-slate-400">
-                Week {selectedPatient.program_week} is active. Invite contributors and collect memories to enrich this chapter.
-              </p>
-            </motion.section>
+            <AIProgramView onInviteClick={() => setActiveTab("family")} onSummaryClick={() => setActiveTab("summary")} />
+          )}
+
+          {selectedPatient && activeTab === "summary" && (
+            <BridgeSummaryView
+              onShare={(target) => setNotice(`Demo sent: ${BRIDGE_SUMMARY.title} shared with ${target}.`)}
+            />
           )}
         </main>
       </div>
+    </div>
+  );
+}
+
+function AIProgramView({
+  onInviteClick,
+  onSummaryClick,
+}: {
+  onInviteClick: () => void;
+  onSummaryClick: () => void;
+}) {
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
+      <section className="bg-indigo-950 text-white rounded-[1.5rem] p-8 shadow-xl">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div>
+            <div className="flex items-center gap-2 text-indigo-200 text-xs font-black uppercase tracking-widest mb-3">
+              <Sparkles size={16} />
+              AI generated from Robert's memories
+            </div>
+            <h3 className="text-3xl font-black">12-week reminiscence therapy program</h3>
+            <p className="mt-3 max-w-3xl text-indigo-100 leading-relaxed">
+              The demo AI clusters Robert's memories by theme, emotion, sensory cues, and care value. It turns family contributions into weekly patient sessions, caregiver prompts, and a final Bridge Summary.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <button onClick={onInviteClick} className="rounded-xl bg-emerald-400 px-5 py-3 text-sm font-bold text-indigo-950 hover:bg-emerald-300">
+              Invite collaborators
+            </button>
+            <button onClick={onSummaryClick} className="rounded-xl bg-white/10 px-5 py-3 text-sm font-bold text-white hover:bg-white/20">
+              Generate Bridge Summary
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {AI_PROGRAM_WEEKS.map((week) => (
+          <section key={week.week} className="bg-posthog-sage dark:bg-slate-900 rounded-[1.5rem] p-6 border border-posthog-border/50 dark:border-slate-800">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-black uppercase tracking-widest text-posthog-orange">Week {week.week}</p>
+                <h4 className="mt-1 text-xl font-bold text-posthog-deep-ink dark:text-slate-100">{week.theme}</h4>
+              </div>
+              <span className="rounded-full bg-posthog-light-sage px-3 py-1 text-xs font-bold text-posthog-orange dark:bg-slate-800">
+                AI planned
+              </span>
+            </div>
+            <div className="mt-4 space-y-3">
+              <InfoLine label="Memories" value={week.sourceMemories.join(", ")} />
+              <InfoLine label="Patient session" value={week.therapySession} />
+              <InfoLine label="Collaborator prompt" value={week.collaboratorPrompt} />
+              <InfoLine label="Why AI chose this" value={week.aiReason} />
+            </div>
+          </section>
+        ))}
+      </div>
+    </motion.div>
+  );
+}
+
+function BridgeSummaryView({ onShare }: { onShare: (target: string) => void }) {
+  const targetIcons = [Users, Building2, Activity];
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
+      <section className="bg-posthog-sage dark:bg-slate-900 rounded-[1.5rem] p-8 border border-posthog-border/50 dark:border-slate-800">
+        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
+          <div>
+            <div className="flex items-center gap-2 text-posthog-orange text-xs font-black uppercase tracking-widest mb-3">
+              <FileText size={16} />
+              {BRIDGE_SUMMARY.status}
+            </div>
+            <h3 className="text-3xl font-black text-posthog-deep-ink dark:text-slate-100">{BRIDGE_SUMMARY.title}</h3>
+            <p className="mt-2 text-sm font-bold text-posthog-ink/60 dark:text-slate-500">{BRIDGE_SUMMARY.generatedFrom}</p>
+            <p className="mt-5 max-w-4xl text-lg leading-relaxed text-posthog-ink dark:text-slate-200">{BRIDGE_SUMMARY.whoIAm}</p>
+          </div>
+          <div className="grid gap-2 min-w-64">
+            {BRIDGE_SUMMARY.shareTargets.map((target, index) => {
+              const Icon = targetIcons[index] ?? Share2;
+              return (
+                <button
+                  key={target}
+                  onClick={() => onShare(target)}
+                  className="flex items-center gap-3 rounded-xl bg-posthog-cta px-4 py-3 text-sm font-bold text-white hover:bg-indigo-700"
+                >
+                  <Icon size={18} />
+                  Send to {target}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <SummaryCard title="What comforts Robert" items={BRIDGE_SUMMARY.comforts} icon={Heart} />
+        <SummaryCard title="PT / care team handoff" items={BRIDGE_SUMMARY.ptCareTeamNotes} icon={Activity} />
+        <SummaryCard title="Facility instructions" items={BRIDGE_SUMMARY.facilityNotes} icon={Building2} />
+      </div>
+    </motion.div>
+  );
+}
+
+function SummaryCard({
+  title,
+  items,
+  icon: Icon,
+}: {
+  title: string;
+  items: string[];
+  icon: typeof Heart;
+}) {
+  return (
+    <section className="bg-posthog-sage dark:bg-slate-900 rounded-[1.5rem] p-6 border border-posthog-border/50 dark:border-slate-800">
+      <div className="flex items-center gap-3 mb-5">
+        <div className="w-10 h-10 rounded-xl bg-posthog-light-sage dark:bg-slate-800 flex items-center justify-center text-posthog-orange">
+          <Icon size={20} />
+        </div>
+        <h4 className="font-bold text-posthog-deep-ink dark:text-slate-100">{title}</h4>
+      </div>
+      <div className="space-y-3">
+        {items.map((item) => (
+          <div key={item} className="rounded-xl bg-posthog-parchment p-3 text-sm font-medium text-posthog-ink/80 dark:bg-slate-800 dark:text-slate-300">
+            {item}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function InfoLine({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl bg-posthog-parchment p-3 dark:bg-slate-800">
+      <p className="text-[10px] font-black uppercase tracking-widest text-posthog-ink/50 dark:text-slate-500">{label}</p>
+      <p className="mt-1 text-sm font-medium text-posthog-ink dark:text-slate-200">{value}</p>
     </div>
   );
 }

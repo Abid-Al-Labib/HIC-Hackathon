@@ -13,7 +13,7 @@ export default function FacilityPortal() {
   const [selectedPatient, setSelectedPatient] = useState<string | null>(null);
 
   const incomingPatients = [
-    { id: 'p1', name: 'Eleanor Johnson', status: 'Ready', score: 92, date: 'Oct 28', type: 'Memory Care' },
+    { id: 'p1', name: 'Robert Ellis', status: 'Ready', score: 92, date: 'Oct 28', type: 'Memory Care' },
     { id: 'p2', name: 'Arthur Blank', status: 'In Review', score: 45, date: 'Nov 02', type: 'Assisted Living' },
     { id: 'p3', name: 'Maria Garcia', status: 'Ready', score: 88, date: 'Oct 30', type: 'High Support' }
   ];
@@ -155,14 +155,14 @@ export default function FacilityPortal() {
                         <div>
                           <h4 className="text-[10px] font-black text-posthog-ink/60 dark:text-slate-500 uppercase tracking-widest mb-3">Life Narrative Summary</h4>
                           <p className="text-lg text-posthog-ink dark:text-slate-200 leading-relaxed font-medium">
-                            Eleanor was a dedicated primary school teacher in Gary, Indiana for 35 years. She took great pride in her flower garden and her role as a community choir leader. She values <span className="text-posthog-orange font-bold underline decoration-indigo-200 decoration-2 underline-offset-4">tradition, early mornings, and active listening.</span>
+                            Robert was a dedicated high school history teacher for 38 years. She took great pride in her classroom, family table, and role as a husband, father, and grandfather. She values <span className="text-posthog-orange font-bold underline decoration-indigo-200 decoration-2 underline-offset-4">teaching, family traditions, and calm routines.</span>
                           </p>
                         </div>
                         <div>
                           <h4 className="text-[10px] font-black text-posthog-ink/60 dark:text-slate-500 uppercase tracking-widest mb-3">Key Comfort Patterns</h4>
                           <ul className="space-y-3">
                             {[
-                              'Responds best to female voices, particularly daughter Sarah',
+                              'Responds best to female voices, particularly wife Elaine',
                               "Calms significantly when Nat King Cole's 'Unforgettable' plays",
                               'Prefers soft high-contrast light to avoid sun-downing anxiety',
                               'Loves holding a cold cup of tea, reminds her of childhood'
@@ -188,7 +188,7 @@ export default function FacilityPortal() {
                               </div>
                               <div>
                                 <p className="text-xs font-bold text-indigo-200 mb-1 uppercase">Opening Prompt</p>
-                                <p className="text-sm font-medium leading-relaxed italic">"Mrs. Johnson, I heard your apple pies are the best in Indiana. What's your secret?"</p>
+                                <p className="text-sm font-medium leading-relaxed italic">"Mr. Ellis, I heard your history stories are unforgettable. What's your secret?"</p>
                               </div>
                             </div>
                             <div className="flex gap-4">
@@ -210,7 +210,7 @@ export default function FacilityPortal() {
                             </div>
                             <div>
                               <p className="text-xs font-black text-posthog-deep-ink dark:text-slate-100 uppercase">Primary Family Contact</p>
-                              <p className="text-sm font-bold text-posthog-ink/70 dark:text-posthog-ink/60 dark:text-slate-500">Sarah Johnson (Daughter)</p>
+                              <p className="text-sm font-bold text-posthog-ink/70 dark:text-posthog-ink/60 dark:text-slate-500">Elaine Ellis (wife)</p>
                             </div>
                           </div>
                           <button className="px-6 py-2 bg-posthog-sage dark:bg-slate-900 text-posthog-orange rounded-xl text-xs font-black ring-1 ring-indigo-200 hover:bg-posthog-parchment dark:bg-[#111827] transition-all uppercase">Call Now</button>
@@ -232,9 +232,9 @@ export default function FacilityPortal() {
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {[
-                      { title: 'The Apple Pie Kitchen', type: 'Voice Story', icon: MessageSquare, color: 'bg-rose-50 text-rose-600' },
-                      { title: 'Evening Lullabies: Ellie', type: 'Music Playlist', icon: Music, color: 'bg-posthog-light-sage/50 dark:bg-slate-800/50 text-posthog-orange' },
-                      { title: 'Oakwood Ave: 1970s', type: 'Photo Journey', icon: ImageIcon, color: 'bg-emerald-50 text-emerald-600' }
+                      { title: 'Sunday Morning Pancakes', type: 'Voice Story', icon: MessageSquare, color: 'bg-rose-50 text-rose-600' },
+                      { title: 'Living Room Dance', type: 'Music Playlist', icon: Music, color: 'bg-posthog-light-sage/50 dark:bg-slate-800/50 text-posthog-orange' },
+                      { title: "St. Mary's Church", type: 'Photo Journey', icon: ImageIcon, color: 'bg-emerald-50 text-emerald-600' }
                     ].map((item, i) => (
                       <div key={i} className="bg-posthog-sage dark:bg-slate-900 p-6 rounded-[2rem] border border-posthog-border dark:border-slate-700 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer group">
                         <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center mb-6 shadow-sm", item.color)}>

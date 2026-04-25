@@ -11,7 +11,7 @@ export default function AuthPage() {
   const { token } = useParams();
   const { user } = useAuth();
   const invite = token ? getDemoInviteByToken(token) : null;
-  const [username, setUsername] = useState("");
+  const [selectedUsername, setSelectedUsername] = useState(DEMO_ACCOUNTS[0]?.username ?? "");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -19,9 +19,9 @@ export default function AuthPage() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const account = demoSignIn(username, password);
-    if (!account) { setError("Invalid username or password."); return; }
-    navigate("/app");
+    const account = demoSignIn(selectedUsername, password);
+    if (!account) { setError("Choose a name and enter the shared demo password."); return; }
+    window.location.assign("/app");
   }
 
   function acceptInvite() {
@@ -35,12 +35,7 @@ export default function AuthPage() {
       setError("This invite is expired or has already been accepted.");
       return;
     }
-    navigate("/app");
-  }
-
-  function quickLogin(username: string) {
-    demoSignIn(username, "demo123");
-    navigate("/app");
+    window.location.assign("/app");
   }
 
   return (
@@ -62,7 +57,7 @@ export default function AuthPage() {
               </div>
               <p className="mt-2 text-sm leading-relaxed text-posthog-ink/70 dark:text-slate-300">
                 {invite
-                  ? `${invite.invite_email} was invited to help add memories for Ellie.`
+                  ? `${invite.invite_email} was invited to help add memories for Robert.`
                   : "This invite is missing, expired, or already accepted."}
               </p>
               {invite?.status === "pending" && (
@@ -76,45 +71,34 @@ export default function AuthPage() {
             </div>
           )}
 
-          {/* Quick login buttons */}
           <div>
             <p className="text-xs font-bold uppercase tracking-widest text-posthog-ink/50 dark:text-slate-500 mb-3">
-              Quick access
+              Choose your name
             </p>
             <div className="grid grid-cols-1 gap-2">
               {DEMO_ACCOUNTS.map((a) => (
                 <button
                   key={a.username}
-                  onClick={() => quickLogin(a.username)}
+                  type="button"
+                  onClick={() => {
+                    setSelectedUsername(a.username);
+                    setError(null);
+                  }}
                   className={cn(
                     "flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold transition-all border",
-                    "bg-posthog-parchment dark:bg-slate-800 border-posthog-border dark:border-slate-700",
-                    "hover:border-posthog-cta hover:text-posthog-cta dark:hover:border-indigo-500 dark:hover:text-indigo-400"
+                    selectedUsername === a.username
+                      ? "bg-posthog-cta text-white border-posthog-cta shadow-sm"
+                      : "bg-posthog-parchment dark:bg-slate-800 border-posthog-border dark:border-slate-700 hover:border-posthog-cta hover:text-posthog-cta dark:hover:border-indigo-500 dark:hover:text-indigo-400"
                   )}
                 >
                   <span>{a.displayName}</span>
-                  <span className="text-xs font-normal opacity-50 capitalize">{a.role.replace(/_/g, " ")}</span>
+                  <span className="text-xs font-normal opacity-70 capitalize">{a.role.replace(/_/g, " ")}</span>
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="flex-1 h-px bg-posthog-border dark:bg-slate-700" />
-            <span className="text-xs text-posthog-ink/40 dark:text-slate-600">or</span>
-            <div className="flex-1 h-px bg-posthog-border dark:bg-slate-700" />
-          </div>
-
-          {/* Manual login */}
           <form onSubmit={handleSubmit} className="space-y-3">
-            <input
-              type="text"
-              required
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Username"
-              className="w-full px-4 py-2.5 rounded-xl border border-posthog-border dark:border-slate-600 bg-white dark:bg-slate-800 text-posthog-deep-ink dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-posthog-cta"
-            />
             <input
               type="password"
               required
@@ -136,7 +120,7 @@ export default function AuthPage() {
           </form>
 
           <p className="text-center text-xs text-posthog-ink/40 dark:text-slate-600">
-            All passwords: <span className="font-mono font-bold">demo123</span>
+            Shared password: <span className="font-mono font-bold">demo1234</span>
           </p>
         </div>
       </div>
