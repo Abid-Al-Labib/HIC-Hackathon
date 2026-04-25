@@ -4,18 +4,21 @@ import {
   Plus, Share2, Calendar,
   ChevronRight, Heart, Brain, Users, Sparkles,
   Camera, Mic, Music as MusicIcon, History,
-  TrendingUp, MessageCircle, LayoutDashboard
+  TrendingUp, MessageCircle, LayoutDashboard, Volume2
 } from 'lucide-react';
 import { MOCK_PATIENT, MOCK_MEMORIES } from '../../constants';
 import { UserRole } from '../../types';
 import { cn } from '../../lib/utils';
+import NarrationStudio from '../NarrationStudio';
 
 interface CaregiverPortalProps {
   role: UserRole;
 }
 
+type CaregiverTab = 'dashboard' | 'vault' | 'program' | 'family' | 'narration';
+
 export default function CaregiverPortal({ role }: CaregiverPortalProps) {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'vault' | 'program' | 'family'>('dashboard');
+  const [activeTab, setActiveTab] = useState<CaregiverTab>('dashboard');
 
   return (
     <div className="min-h-screen bg-posthog-parchment dark:bg-[#111827] flex">
@@ -35,10 +38,11 @@ export default function CaregiverPortal({ role }: CaregiverPortalProps) {
               { id: 'vault', label: 'Memory Vault', icon: History },
               { id: 'program', label: '12-Week Program', icon: Calendar },
               { id: 'family', label: 'Family & Collaborators', icon: Users },
+              { id: 'narration', label: 'Narration Studio', icon: Volume2 },
             ].map((item) => (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id as 'dashboard' | 'vault' | 'program' | 'family')}
+                onClick={() => setActiveTab(item.id as CaregiverTab)}
                 className={cn(
                   "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all",
                   activeTab === item.id
@@ -260,6 +264,16 @@ export default function CaregiverPortal({ role }: CaregiverPortalProps) {
                   </div>
                 ))}
               </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'narration' && (
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="max-w-3xl"
+            >
+              <NarrationStudio />
             </motion.div>
           )}
         </div>
