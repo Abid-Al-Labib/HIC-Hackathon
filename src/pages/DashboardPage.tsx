@@ -1,14 +1,5 @@
 import { Link } from "react-router-dom";
-import ThemeToggle from "../components/ThemeToggle";
-
-type Theme = "light" | "dark";
-
-type DashboardPageProps = {
-  theme: Theme;
-  onToggleTheme: () => void;
-};
-
-function DashboardPage({ theme, onToggleTheme }: DashboardPageProps) {
+function DashboardPage() {
   return (
     <main className="min-h-screen bg-posthog-parchment p-4 text-posthog-ink dark:bg-[#111827] dark:text-slate-100 md:p-6">
       <div className="mx-auto grid max-w-6xl gap-4 md:grid-cols-[240px_1fr]">
@@ -30,15 +21,12 @@ function DashboardPage({ theme, onToggleTheme }: DashboardPageProps) {
               Landing
             </Link>
           </nav>
-          <div className="mt-4 border-t border-posthog-border pt-4 dark:border-slate-700">
-            <ThemeToggle theme={theme} onToggle={onToggleTheme} />
-          </div>
         </aside>
 
         <section className="rounded-md border border-posthog-border bg-posthog-parchment p-6 dark:border-slate-700 dark:bg-slate-900">
           <h1 className="text-3xl font-bold tracking-[-0.02em]">App Dashboard</h1>
           <p className="mt-2 text-base leading-relaxed text-posthog-ink dark:text-slate-300">
-            Simple dashboard page with sidebar and theme switch.
+            Simple dashboard page with a dark-first sidebar layout.
           </p>
           <div className="mt-6 rounded-md border border-posthog-border bg-posthog-sage p-4 dark:border-slate-700 dark:bg-slate-800">
             <p className="text-sm leading-relaxed text-posthog-ink dark:text-slate-300">
