@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { motion } from "motion/react";
 import {
   Activity,
+  AlertTriangle,
   Brain,
   Building2,
   Calendar,
@@ -40,6 +41,26 @@ interface CaregiverPortalProps {
 
 type MemoryRow = Database["public"]["Tables"]["memories"]["Row"];
 
+function getAiReview(memory: MemoryRow) {
+  const text = `${memory.title} ${memory.description ?? ""}`.toLowerCase();
+  const difficultSignals = ["cried", "passing", "loss", "died", "war", "alone", "afraid", "angry", "argument", "hospital"];
+  const hasDifficultEmotion = memory.emotion_tags.includes("bittersweet") || difficultSignals.some((word) => text.includes(word));
+
+  if (hasDifficultEmotion) {
+    return {
+      level: "warning" as const,
+      label: "AI review: possible distressing emotion",
+      note: "Caregiver should reframe or approve carefully before this reaches Robert.",
+    };
+  }
+
+  return {
+    level: "safe" as const,
+    label: "AI review: comfort-safe",
+    note: "Positive identity, familiar people, and usable sensory cues detected.",
+  };
+}
+
 const MEMORY_TYPES: MemoryType[] = ["story", "photo", "audio", "music", "sensory", "life_event"];
 const LIFE_PERIODS: LifePeriod[] = ["childhood", "young_adult", "middle_age", "recent"];
 const EMOTIONS: EmotionTag[] = ["joyful", "peaceful", "proud", "loving", "funny", "bittersweet"];
@@ -54,6 +75,7 @@ const emptyMemoryForm = {
 
 export default function CaregiverPortal({ role }: CaregiverPortalProps) {
   const { user, signOut } = useAuth();
+  const shouldOpenMemoryInput = new URLSearchParams(window.location.search).get("addMemory") === "1";
   const patients = useMemo(() => (user ? getDemoPatientsForUser(user.id, user.role) : []), [user]);
   const [activeTab, setActiveTab] = useState<"dashboard" | "vault" | "program" | "summary" | "family">("dashboard");
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
@@ -61,6 +83,7 @@ export default function CaregiverPortal({ role }: CaregiverPortalProps) {
   const [invites, setInvites] = useState<DemoInvite[]>([]);
   const [memories, setMemories] = useState<MemoryRow[]>([]);
   const [lastInviteLink, setLastInviteLink] = useState("");
+  const [programInviteEmails, setProgramInviteEmails] = useState<Record<number, string>>({});
   const [notice, setNotice] = useState<string | null>(null);
   const [form, setForm] = useState(emptyMemoryForm);
   const [editingMemory, setEditingMemory] = useState<MemoryRow | null>(null);
@@ -80,6 +103,13 @@ export default function CaregiverPortal({ role }: CaregiverPortalProps) {
   useEffect(() => {
     refreshDemoData();
   }, [selectedPatient?.id, user?.id, user?.role, isPrimaryCaregiver]);
+
+  useEffect(() => {
+    if (!shouldOpenMemoryInput) return;
+    setActiveTab("vault");
+    setNotice("Invite accepted. Add a memory for Robert here, then submit it for caregiver review.");
+    window.history.replaceState({}, "", "/app");
+  }, [shouldOpenMemoryInput]);
 
   function refreshDemoData() {
     if (!selectedPatient || !user) return;
@@ -104,6 +134,26 @@ export default function CaregiverPortal({ role }: CaregiverPortalProps) {
       refreshDemoData();
       await navigator.clipboard?.writeText(link);
       setNotice("Invite created and copied. Share the link with the contributor.");
+    } catch (error: unknown) {
+      setNotice((error as Error).message);
+    } finally {
+      setSavingInvite(false);
+    }
+  }
+
+  async function handleProgramInvite(week: number, theme: string, event: FormEvent) {
+    event.preventDefault();
+    if (!selectedPatient || !user || !programInviteEmails[week]?.trim()) return;
+    setSavingInvite(true);
+    setNotice(null);
+    try {
+      const invite = createDemoInvite(selectedPatient.id, user.id, programInviteEmails[week].trim());
+      const link = buildInviteLink(invite.token);
+      setLastInviteLink(link);
+      setProgramInviteEmails((current) => ({ ...current, [week]: "" }));
+      refreshDemoData();
+      await navigator.clipboard?.writeText(link);
+      setNotice(`Invite copied for Week ${week}: ${theme}. Share it with the collaborator.`);
     } catch (error: unknown) {
       setNotice((error as Error).message);
     } finally {
@@ -305,6 +355,9 @@ export default function CaregiverPortal({ role }: CaregiverPortalProps) {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid grid-cols-1 xl:grid-cols-3 gap-8">
               <section className="xl:col-span-2 bg-posthog-sage dark:bg-slate-900 rounded-[1.5rem] p-8 border border-posthog-border/50 dark:border-slate-800">
                 <h3 className="text-xl font-bold text-posthog-deep-ink dark:text-slate-100 mb-6">Memory Vault</h3>
+                {isPrimaryCaregiver && (
+                  <AiSafetyPanel memories={memories} />
+                )}
                 <MemoryList
                   memories={memories}
                   currentUserId={user?.id}
@@ -338,21 +391,31 @@ export default function CaregiverPortal({ role }: CaregiverPortalProps) {
                         <div>
                           <p className="font-bold text-posthog-deep-ink dark:text-slate-100">{invite.invite_email}</p>
                           <p className="text-xs text-posthog-ink/60 dark:text-slate-400 capitalize">
-                            {invite.role.replace("_", " ")} | {invite.status}
+                            {invite.context ? `${invite.context} | ` : ""}{invite.role.replace("_", " ")} | {invite.status}
                           </p>
                         </div>
-                        <button
-                          onClick={() => {
-                            const link = buildInviteLink(invite.token);
-                            setLastInviteLink(link);
-                            navigator.clipboard?.writeText(link);
-                            setNotice("Invite link copied.");
-                          }}
-                          className="flex items-center gap-2 rounded-xl border border-posthog-border px-3 py-2 text-sm font-bold text-posthog-orange hover:bg-white dark:border-slate-700 dark:hover:bg-slate-900"
-                        >
-                          <Copy size={16} />
-                          Copy Link
-                        </button>
+                        <div className="flex flex-wrap gap-2">
+                          {invite.status === "pending" && (
+                            <a
+                              href={buildInviteLink(invite.token)}
+                              className="flex items-center gap-2 rounded-xl bg-posthog-cta px-3 py-2 text-sm font-bold text-white hover:bg-indigo-700"
+                            >
+                              Open Invite
+                            </a>
+                          )}
+                          <button
+                            onClick={() => {
+                              const link = buildInviteLink(invite.token);
+                              setLastInviteLink(link);
+                              navigator.clipboard?.writeText(link);
+                              setNotice("Invite link copied.");
+                            }}
+                            className="flex items-center gap-2 rounded-xl border border-posthog-border px-3 py-2 text-sm font-bold text-posthog-orange hover:bg-white dark:border-slate-700 dark:hover:bg-slate-900"
+                          >
+                            <Copy size={16} />
+                            Copy Link
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -379,7 +442,15 @@ export default function CaregiverPortal({ role }: CaregiverPortalProps) {
           )}
 
           {selectedPatient && activeTab === "program" && (
-            <AIProgramView onInviteClick={() => setActiveTab("family")} onSummaryClick={() => setActiveTab("summary")} />
+            <AIProgramView
+              canInvite={isPrimaryCaregiver}
+              inviteEmails={programInviteEmails}
+              savingInvite={savingInvite}
+              onInviteClick={() => setActiveTab("family")}
+              onSummaryClick={() => setActiveTab("summary")}
+              onInviteEmailChange={(week, email) => setProgramInviteEmails((current) => ({ ...current, [week]: email }))}
+              onProgramInvite={handleProgramInvite}
+            />
           )}
 
           {selectedPatient && activeTab === "summary" && (
@@ -394,11 +465,21 @@ export default function CaregiverPortal({ role }: CaregiverPortalProps) {
 }
 
 function AIProgramView({
+  canInvite,
+  inviteEmails,
+  savingInvite,
   onInviteClick,
   onSummaryClick,
+  onInviteEmailChange,
+  onProgramInvite,
 }: {
+  canInvite: boolean;
+  inviteEmails: Record<number, string>;
+  savingInvite: boolean;
   onInviteClick: () => void;
   onSummaryClick: () => void;
+  onInviteEmailChange: (week: number, email: string) => void;
+  onProgramInvite: (week: number, theme: string, event: FormEvent) => void;
 }) {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
@@ -443,6 +524,37 @@ function AIProgramView({
               <InfoLine label="Collaborator prompt" value={week.collaboratorPrompt} />
               <InfoLine label="Why AI chose this" value={week.aiReason} />
             </div>
+            {canInvite && (
+              <form
+                onSubmit={(event) => onProgramInvite(week.week, week.theme, event)}
+                className="mt-5 rounded-2xl border border-dashed border-posthog-border bg-posthog-parchment p-4 dark:border-slate-700 dark:bg-slate-800"
+              >
+                <div className="flex items-center gap-2 text-posthog-orange text-xs font-black uppercase tracking-widest mb-3">
+                  <MailPlus size={14} />
+                  Invite for this aspect
+                </div>
+                <p className="mb-3 text-sm text-posthog-ink/70 dark:text-slate-400">
+                  Send a targeted invite asking someone to help with Week {week.week}: {week.theme.toLowerCase()}.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="email"
+                    required
+                    value={inviteEmails[week.week] ?? ""}
+                    onChange={(event) => onInviteEmailChange(week.week, event.target.value)}
+                    placeholder="family@example.com"
+                    className="min-w-0 flex-1 rounded-xl border border-posthog-border bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
+                  />
+                  <button
+                    type="submit"
+                    disabled={savingInvite}
+                    className="rounded-xl bg-posthog-cta px-4 py-2 text-sm font-bold text-white hover:bg-indigo-700 disabled:opacity-60"
+                  >
+                    Send week invite
+                  </button>
+                </div>
+              </form>
+            )}
           </section>
         ))}
       </div>
@@ -526,6 +638,32 @@ function InfoLine({ label, value }: { label: string; value: string }) {
     <div className="rounded-xl bg-posthog-parchment p-3 dark:bg-slate-800">
       <p className="text-[10px] font-black uppercase tracking-widest text-posthog-ink/50 dark:text-slate-500">{label}</p>
       <p className="mt-1 text-sm font-medium text-posthog-ink dark:text-slate-200">{value}</p>
+    </div>
+  );
+}
+
+function AiSafetyPanel({ memories }: { memories: MemoryRow[] }) {
+  const submitted = memories.filter((memory) => memory.status === "submitted");
+  const flaggedByAi = submitted.filter((memory) => getAiReview(memory).level === "warning");
+  const safeCount = submitted.length - flaggedByAi.length;
+
+  return (
+    <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className="rounded-2xl border border-posthog-border bg-posthog-parchment p-4 dark:border-slate-700 dark:bg-slate-800">
+        <p className="text-[10px] font-black uppercase tracking-widest text-posthog-ink/50 dark:text-slate-500">AI safety queue</p>
+        <p className="mt-1 text-2xl font-black text-posthog-deep-ink dark:text-slate-100">{submitted.length}</p>
+        <p className="text-xs font-medium text-posthog-ink/60 dark:text-slate-400">submitted memories awaiting review</p>
+      </div>
+      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/30">
+        <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-200">Comfort-safe</p>
+        <p className="mt-1 text-2xl font-black text-emerald-700 dark:text-emerald-200">{safeCount}</p>
+        <p className="text-xs font-medium text-emerald-700/80 dark:text-emerald-200/80">ready for caregiver approval</p>
+      </div>
+      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/60 dark:bg-amber-950/30">
+        <p className="text-[10px] font-black uppercase tracking-widest text-amber-800 dark:text-amber-200">Needs reframe</p>
+        <p className="mt-1 text-2xl font-black text-amber-800 dark:text-amber-200">{flaggedByAi.length}</p>
+        <p className="text-xs font-medium text-amber-800/80 dark:text-amber-200/80">possible distressing emotions detected</p>
+      </div>
     </div>
   );
 }
@@ -654,6 +792,7 @@ function MemoryList({
     <div className="space-y-4">
       {memories.map((memory) => {
         const canEdit = isPrimaryCaregiver || memory.contributor_id === currentUserId;
+        const aiReview = getAiReview(memory);
         return (
           <div key={memory.id} className="flex flex-wrap items-center gap-4 rounded-2xl border border-posthog-border/60 bg-posthog-parchment p-4 dark:border-slate-700 dark:bg-slate-800">
             <div className="min-w-0 flex-1">
@@ -667,6 +806,22 @@ function MemoryList({
               <p className="mt-2 text-xs text-posthog-ink/60 dark:text-slate-500 capitalize">
                 {memory.type} | {(memory.life_period ?? "unspecified").replace("_", " ")}
               </p>
+              {memory.status === "submitted" && (
+                <div
+                  className={cn(
+                    "mt-3 flex items-start gap-2 rounded-xl border px-3 py-2 text-xs font-bold",
+                    aiReview.level === "warning"
+                      ? "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200"
+                      : "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200",
+                  )}
+                >
+                  {aiReview.level === "warning" ? <AlertTriangle size={16} className="shrink-0" /> : <Sparkles size={16} className="shrink-0" />}
+                  <span>
+                    {aiReview.label}
+                    <span className="block pt-1 font-medium opacity-80">{aiReview.note}</span>
+                  </span>
+                </div>
+              )}
             </div>
             <div className="flex flex-wrap gap-2">
               {isPrimaryCaregiver && memory.status === "submitted" && (
@@ -724,8 +879,13 @@ function MemoryForm({
   return (
     <section className="bg-posthog-sage dark:bg-slate-900 rounded-[1.5rem] p-8 border border-posthog-border/50 dark:border-slate-800">
       <h3 className="text-lg font-bold text-posthog-deep-ink dark:text-slate-100 mb-4">
-        {editingTitle ? `Edit ${editingTitle}` : "Add Memory"}
+        {editingTitle ? `Edit ${editingTitle}` : isPrimaryCaregiver ? "Add Memory" : "Add Your Memory For Robert"}
       </h3>
+      {!isPrimaryCaregiver && (
+        <div className="mb-4 rounded-2xl border border-posthog-border bg-posthog-parchment p-4 text-sm font-medium text-posthog-ink/80 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+          Your contribution will be screened by AI for comfort and safety, then sent to Elaine for approval before it appears in Robert's therapy program.
+        </div>
+      )}
       <form onSubmit={onSubmit} className="space-y-4">
         <input
           required

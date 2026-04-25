@@ -15,6 +15,7 @@ export type DemoInvite = {
   created_at: string;
   expires_at: string;
   accepted_by?: string;
+  context?: string;
 };
 
 export type DemoMemoryInput = {
@@ -28,6 +29,7 @@ export type DemoMemoryInput = {
 const PATIENTS_KEY = "mb_demo_v2_patients";
 const MEMORIES_KEY = "mb_demo_v2_memories";
 const INVITES_KEY = "mb_demo_v2_invites";
+export const SEEDED_DEMO_INVITE_TOKEN = "demo-invite-relationships";
 
 const DEMO_PATIENT: PatientRow = {
   id: "demo-patient-profile",
@@ -63,6 +65,21 @@ const DEMO_MEMORIES: MemoryRow[] = MOCK_MEMORIES.map((memory, index) =>
     patientDisplay: memory.patientDisplay,
   }),
 );
+
+const DEMO_INVITES: DemoInvite[] = [
+  {
+    id: "demo-seeded-invite-relationships",
+    patient_id: DEMO_PATIENT.id,
+    invited_by: "demo-caregiver",
+    invite_email: "michael.ellis@example.com",
+    role: "family_contributor",
+    token: SEEDED_DEMO_INVITE_TOKEN,
+    status: "pending",
+    created_at: new Date().toISOString(),
+    expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    context: "Week 2: Loved Ones and Relationships",
+  },
+];
 
 export function getDemoPatientsForUser(userId: string, role: UserRole): PatientRow[] {
   const patients = readPatients();
@@ -176,7 +193,9 @@ function writeMemories(memories: MemoryRow[]) {
 }
 
 function readInvites(): DemoInvite[] {
-  return readJson(INVITES_KEY, []);
+  const saved = readJson(INVITES_KEY, [] as DemoInvite[]);
+  const savedTokens = new Set(saved.map((invite) => invite.token));
+  return [...DEMO_INVITES.filter((invite) => !savedTokens.has(invite.token)), ...saved];
 }
 
 function writeInvites(invites: DemoInvite[]) {

@@ -214,7 +214,7 @@ export const AI_PROGRAM_WEEKS = [
   },
   {
     week: 2,
-    theme: "Young Love",
+    theme: "Loved Ones and Relationships",
     sourceMemories: ["The Wedding Day at St. Mary's Church", "The Boardwalk Dance"],
     therapySession: "Photo and music session focused on Elaine walking down the aisle and the first boardwalk dance.",
     collaboratorPrompt: "Ask family for wedding photos, Elaine's favorite song from 1973, and boardwalk details.",

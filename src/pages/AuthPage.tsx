@@ -21,7 +21,7 @@ export default function AuthPage() {
     e.preventDefault();
     const account = demoSignIn(selectedUsername, password);
     if (!account) { setError("Choose a name and enter the shared demo password."); return; }
-    window.location.assign("/app");
+    window.location.assign("/app?addMemory=1");
   }
 
   function acceptInvite() {
